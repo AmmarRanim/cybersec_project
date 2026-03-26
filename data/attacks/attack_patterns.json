@@ -1,0 +1,374 @@
+{
+  "schema_version": "1.0",
+  "description": "Insider threat attack patterns for simulation and testing",
+  "last_updated": "2024-01-15",
+  "attack_patterns": [
+    {
+      "id": "usb_exfil_financial_001",
+      "name": "USB Exfiltration - Financial Documents",
+      "category": "data_exfiltration",
+      "subcategory": "physical_medium",
+      "mitre_technique": "T1052.001",
+      "severity": "high",
+      "description": "Employee copies sensitive financial documents to USB drive",
+      "sequence": [
+        {
+          "step": 1,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Finance\\Q4_Budget.xlsx",
+            "C:\\Finance\\Salaries_2024.xlsx",
+            "C:\\Accounting\\Revenue_Report.xlsx"
+          ],
+          "time_offset_minutes": [-15, -10],
+          "metadata": {
+            "sensitivity_level": 2,
+            "file_size_bytes": [2000000, 8000000]
+          }
+        },
+        {
+          "step": 2,
+          "event_type": "device_connect",
+          "event_category": "device",
+          "action": "connect",
+          "resource_patterns": [
+            "USB_DEVICE_VID_0781_PID_5567",
+            "USB_DEVICE_VID_058F_PID_6387",
+            "USB_DEVICE_VID_090C_PID_1000"
+          ],
+          "time_offset_minutes": [-5, -2],
+          "metadata": {
+            "device_type": "usb_storage"
+          }
+        },
+        {
+          "step": 3,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "write",
+          "resource_patterns": [
+            "E:\\Financial_Data.xlsx",
+            "F:\\Backup_Files.zip",
+            "E:\\Documents\\Export.xlsx"
+          ],
+          "time_offset_minutes": [0, 0],
+          "metadata": {
+            "is_usb": true,
+            "sensitivity_level": 2,
+            "file_size_bytes": [5000000, 20000000]
+          }
+        }
+      ]
+    },
+    {
+      "id": "usb_exfil_source_code_002",
+      "name": "USB Exfiltration - Source Code",
+      "category": "data_exfiltration",
+      "subcategory": "physical_medium",
+      "mitre_technique": "T1052.001",
+      "severity": "critical",
+      "description": "Developer copies proprietary source code to USB drive",
+      "sequence": [
+        {
+          "step": 1,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Projects\\ProductX\\src",
+            "C:\\Development\\API\\core",
+            "C:\\Code\\proprietary_algorithm.py"
+          ],
+          "time_offset_minutes": [-20, -15],
+          "metadata": {
+            "sensitivity_level": 2,
+            "file_size_bytes": [10000000, 50000000]
+          }
+        },
+        {
+          "step": 2,
+          "event_type": "device_connect",
+          "event_category": "device",
+          "action": "connect",
+          "resource_patterns": [
+            "USB_DEVICE_VID_0781_PID_5567"
+          ],
+          "time_offset_minutes": [-3, -1],
+          "metadata": {
+            "device_type": "usb_storage"
+          }
+        },
+        {
+          "step": 3,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "write",
+          "resource_patterns": [
+            "E:\\source_backup.zip",
+            "F:\\code_archive.tar.gz"
+          ],
+          "time_offset_minutes": [0, 0],
+          "metadata": {
+            "is_usb": true,
+            "sensitivity_level": 2,
+            "file_size_bytes": [15000000, 60000000]
+          }
+        }
+      ]
+    },
+    {
+      "id": "email_exfil_customer_data_001",
+      "name": "Email Exfiltration - Customer Database",
+      "category": "data_exfiltration",
+      "subcategory": "email",
+      "mitre_technique": "T1114.002",
+      "severity": "critical",
+      "description": "Employee emails customer data to personal email",
+      "sequence": [
+        {
+          "step": 1,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\CustomerData\\customers.csv",
+            "C:\\CRM\\client_list.xlsx",
+            "C:\\Sales\\contacts_2024.xlsx"
+          ],
+          "time_offset_minutes": [-25, -20],
+          "metadata": {
+            "sensitivity_level": 2,
+            "file_size_bytes": [3000000, 12000000]
+          }
+        },
+        {
+          "step": 2,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\CustomerData\\customers.csv",
+            "C:\\CRM\\client_list.xlsx"
+          ],
+          "time_offset_minutes": [-10, -5],
+          "metadata": {
+            "sensitivity_level": 2
+          }
+        },
+        {
+          "step": 3,
+          "event_type": "email_sent",
+          "event_category": "email",
+          "action": "send",
+          "resource_patterns": [
+            "email_to_1_recipients",
+            "email_to_2_recipients"
+          ],
+          "time_offset_minutes": [0, 0],
+          "metadata": {
+            "external_recipient_count": 1,
+            "attachment_count": 1,
+            "attachment_size_bytes": [3000000, 12000000]
+          }
+        }
+      ]
+    },
+    {
+      "id": "email_exfil_strategic_plans_002",
+      "name": "Email Exfiltration - Strategic Plans",
+      "category": "data_exfiltration",
+      "subcategory": "email",
+      "mitre_technique": "T1114.002",
+      "severity": "high",
+      "description": "Executive emails confidential strategic plans externally",
+      "sequence": [
+        {
+          "step": 1,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Executive\\Strategic_Plan_2025.docx",
+            "C:\\Board\\Merger_Proposal.pptx",
+            "C:\\Leadership\\Expansion_Strategy.pdf"
+          ],
+          "time_offset_minutes": [-30, -20],
+          "metadata": {
+            "sensitivity_level": 2,
+            "file_size_bytes": [2000000, 8000000]
+          }
+        },
+        {
+          "step": 2,
+          "event_type": "email_sent",
+          "event_category": "email",
+          "action": "send",
+          "resource_patterns": [
+            "email_to_1_recipients"
+          ],
+          "time_offset_minutes": [0, 0],
+          "metadata": {
+            "external_recipient_count": 1,
+            "attachment_count": 1,
+            "attachment_size_bytes": [2000000, 8000000]
+          }
+        }
+      ]
+    },
+    {
+      "id": "credential_theft_browser_001",
+      "name": "Credential Theft - Browser Passwords",
+      "category": "credential_access",
+      "subcategory": "password_stores",
+      "mitre_technique": "T1555.003",
+      "severity": "high",
+      "description": "Employee steals saved passwords from browser",
+      "sequence": [
+        {
+          "step": 1,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data",
+            "C:\\Users\\*\\AppData\\Local\\Microsoft\\Edge\\User Data"
+          ],
+          "time_offset_minutes": [-25, -20],
+          "metadata": {
+            "sensitivity_level": 1
+          }
+        },
+        {
+          "step": 2,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data",
+            "C:\\Users\\*\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Login Data"
+          ],
+          "time_offset_minutes": [-15, -10],
+          "metadata": {
+            "sensitivity_level": 2
+          }
+        },
+        {
+          "step": 3,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Projects\\app\\.env",
+            "C:\\Config\\credentials.json",
+            "C:\\Keys\\api_keys.txt"
+          ],
+          "time_offset_minutes": [-5, -2],
+          "metadata": {
+            "sensitivity_level": 2
+          }
+        },
+        {
+          "step": 4,
+          "event_type": "network_connection",
+          "event_category": "network",
+          "action": "connect",
+          "resource_patterns": [
+            "connection_to_203.0.113.50",
+            "connection_to_198.51.100.75"
+          ],
+          "time_offset_minutes": [0, 0],
+          "metadata": {
+            "dst_ip": "203.0.113.50",
+            "protocol": "HTTPS",
+            "bytes_sent": [50000, 200000]
+          }
+        }
+      ]
+    },
+    {
+      "id": "file_discovery_hr_001",
+      "name": "Unauthorized File Discovery - HR Data",
+      "category": "discovery",
+      "subcategory": "file_directory",
+      "mitre_technique": "T1083",
+      "severity": "medium",
+      "description": "Employee browses unauthorized HR directories",
+      "sequence": [
+        {
+          "step": 1,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\HR\\Salaries",
+            "C:\\HumanResources\\Compensation"
+          ],
+          "time_offset_minutes": [-12, -10],
+          "metadata": {
+            "sensitivity_level": 1
+          }
+        },
+        {
+          "step": 2,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Finance\\Budgets",
+            "C:\\Accounting\\Payroll"
+          ],
+          "time_offset_minutes": [-8, -6],
+          "metadata": {
+            "sensitivity_level": 1
+          }
+        },
+        {
+          "step": 3,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Legal\\Contracts",
+            "C:\\Legal\\Agreements"
+          ],
+          "time_offset_minutes": [-5, -3],
+          "metadata": {
+            "sensitivity_level": 1
+          }
+        },
+        {
+          "step": 4,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Executive\\Strategic_Plans",
+            "C:\\Board\\Minutes"
+          ],
+          "time_offset_minutes": [-2, -1],
+          "metadata": {
+            "sensitivity_level": 2
+          }
+        },
+        {
+          "step": 5,
+          "event_type": "file_access",
+          "event_category": "file",
+          "action": "read",
+          "resource_patterns": [
+            "C:\\Executive\\Strategic_Plans\\Merger_2024.docx",
+            "C:\\HR\\Salaries\\Executive_Compensation.xlsx"
+          ],
+          "time_offset_minutes": [0, 0],
+          "metadata": {
+            "sensitivity_level": 2,
+            "file_size_bytes": [500000, 3000000]
+          }
+        }
+      ]
+    }
+  ]
+}
+

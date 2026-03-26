@@ -1,0 +1,36 @@
+[project]
+name = "cybersec-project"
+version = "0.1.0"
+description = "Autonomous SOC Threat Detection - Team 1: Data Processing & Attack Simulation Agent"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Agent framework
+    "google-adk",
+    # Sandbox execution
+    "daytona-sdk",
+    # MCP protocol
+    "mcp",
+    # Data collection
+    "psutil",
+    "watchdog",
+    "browser-history",
+    # Data processing
+    "pandas",
+    "jsonlines",
+    # Web scraping / enrichment
+    "beautifulsoup4",
+    "requests",
+    # Validation
+    "pydantic",
+    # Django (Phase 6)
+    "django",
+    "djangorestframework",
+    # Testing
+    "pytest",
+    "pytest-asyncio",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"

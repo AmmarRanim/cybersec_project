@@ -1,0 +1,18 @@
+{
+  "export_timestamp": "2026-03-26T15:59:38.891503",
+  "event_count": 4,
+  "time_range": {
+    "start": "2024-01-15T10:00:00",
+    "end": "2024-01-15T11:00:00"
+  },
+  "data_source": "event_storage_mcp",
+  "schema_version": "1.0",
+  "filters_applied": {
+    "event_type": null,
+    "event_category": "file",
+    "user_id": null,
+    "device_id": null,
+    "start_time": null,
+    "end_time": null
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "collector-executor": {
+      "command": "python",
+      "args": ["-m", "mcp_servers.collector_executor.server"],
+      "transport": "stdio",
+      "description": "Execute Phase 1 data collectors on-demand"
+    },
+    "event-storage": {
+      "command": "python",
+      "args": ["-m", "mcp_servers.event_storage.server"],
+      "transport": "stdio",
+      "description": "Persist and query StandardEvent objects"
+    },
+    "attack-injector": {
+      "command": "python",
+      "args": ["-m", "mcp_servers.attack_injector.server"],
+      "transport": "stdio",
+      "description": "Generate realistic attack simulations based on MITRE ATT&CK"
+    },
+    "enrichment": {
+      "command": "python",
+      "args": ["-m", "mcp_servers.enrichment.server"],
+      "transport": "stdio",
+      "description": "Add user/device context and correlate events"
+    },
+    "python-executor": {
+      "command": "python",
+      "args": ["-m", "mcp_servers.python_executor.server"],
+      "transport": "stdio",
+      "description": "Execute Python code in sandboxed environment"
+    }
+  }
+}

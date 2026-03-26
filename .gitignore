@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env
+
+# Logs (keep directory, ignore contents)
+logs/*.jsonl
+logs/*.log
+!logs/.gitkeep
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Node
+node_modules/
