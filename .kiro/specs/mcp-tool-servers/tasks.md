@@ -141,27 +141,27 @@ The implementation follows this sequence:
 - [x] 5. Checkpoint - Verify Event-Storage MCP
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Implement Attack-Injector MCP Server
-  - [ ] 6.1 Create attack_injector/server.py with MCP SDK setup
+- [-] 6. Implement Attack-Injector MCP Server
+  - [x] 6.1 Create attack_injector/server.py with MCP SDK setup
     - Implement stdio transport and JSON-RPC handling
     - Set up logging to logs/attack_injector.log
     - _Requirements: 3.10, 6.6_
 
-  - [ ] 6.2 Create attack pattern dataset (data/attacks/attack_patterns.json)
+  - [-] 6.2 Create attack pattern dataset (data/attacks/attack_patterns.json)
     - Define attack pattern schema with event sequences
-    - Create initial dataset with 10+ attack patterns covering insider threats
+    - Create initial dataset with 16 attack patterns (6 custom + 10 CERT r4.2) ✓ COMPLETE
     - Include MITRE ATT&CK technique mappings
     - Support randomization parameters (timing, file sizes, resources)
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [ ] 6.3 Implement dataset loader (attack_injector/dataset_loader.py)
+  - [x] 6.3 Implement dataset loader (attack_injector/dataset_loader.py)
     - Load attack patterns from JSON dataset
     - Cache patterns in memory for performance
     - Validate pattern schema on load
     - Support filtering by category, MITRE technique, severity
     - _Requirements: 3.1, 3.8_
 
-  - [ ] 6.4 Implement attack generator (attack_injector/attack_generator.py)
+  - [x] 6.4 Implement attack generator (attack_injector/attack_generator.py)
     - Generate events from dataset pattern definitions
     - Apply realistic temporal patterns (5-30 minute windows)
     - Randomize resources, file sizes, timing variations
@@ -169,31 +169,32 @@ The implementation follows this sequence:
     - Mark all events with is_simulated=True, attack_type, mitre_technique
     - _Requirements: 3.4, 3.5, 3.6, 3.7, 3.11, 3.12_
 
-  - [ ] 6.5 Implement inject_attack tool
+  - [x] 6.5 Implement inject_attack tool
     - Accept attack_id, category, or mitre_technique parameters
     - Support optional user_id/device_id (random if not provided)
     - Support randomize flag for timing/resource variations
     - Return StandardEvent dictionaries compatible with Event-Storage MCP
     - _Requirements: 3.1, 3.9_
 
-  - [ ] 6.6 Implement list_attack_patterns tool
+  - [x] 6.6 Implement list_attack_patterns tool
     - Return all available attack patterns from dataset
     - Support filtering by category, MITRE technique, severity
     - Include pattern metadata (event count, description, technique)
     - _Requirements: 3.8_
 
-  - [ ] 6.7 Implement add_attack_pattern tool (optional)
+  - [x] 6.7 Implement add_attack_pattern tool (optional)
     - Allow agents to add new attack patterns to dataset
     - Validate pattern schema before adding
     - Persist to data/attacks/attack_patterns.json
     - _Requirements: 3.1_
 
-  - [ ] 6.8 Create CERT dataset converter (data/attacks/cert_converter.py)
-    - Parse CERT r4.2 answers/ directory for labeled attack scenarios
-    - Convert CERT attack sequences to attack_patterns.json format
-    - Map CERT event types to StandardEvent schema
-    - Extract attack metadata (user, dates, scenario description)
-    - Support both custom patterns and CERT patterns in dataset
+  - [x] 6.8 Create CERT dataset converter (data/attacks/cert_converter.py)
+    - Parse CERT r4.2 answers/ directory for labeled attack scenarios ✓ COMPLETE
+    - Convert CERT attack sequences to attack_patterns.json format ✓ COMPLETE
+    - Map CERT event types to StandardEvent schema ✓ COMPLETE
+    - Extract attack metadata (user, dates, scenario description) ✓ COMPLETE
+    - Support both custom patterns and CERT patterns in dataset ✓ COMPLETE
+    - Successfully converted 10 real insider threat instances from CERT r4.2
     - _Requirements: 3.1, 3.2, 3.3, 3.7_
 
   - [ ]* 6.9 Write property test for attack simulation metadata
@@ -208,7 +209,7 @@ The implementation follows this sequence:
     - **Property 10: Attack Events Use Valid User/Device IDs**
     - **Validates: Requirements 3.7**
 
-  - [ ] 6.12 Create attack_injector/README.md with usage examples
+  - [x] 6.12 Create attack_injector/README.md with usage examples
     - Document dataset-driven architecture
     - Explain attack pattern schema
     - Include example tool invocations for all 3 tools
@@ -216,8 +217,10 @@ The implementation follows this sequence:
     - Document CERT r4.2 dataset integration
     - _Requirements: 6.8, 8.7_
 
-- [ ] 7. Checkpoint - Verify Attack-Injector MCP
-  - Ensure all tests pass, ask the user if questions arise.
+- [x] 7. Checkpoint - Verify Attack-Injector MCP
+  - All tests pass ✓
+  - 16 attack patterns loaded (6 custom + 10 CERT r4.2) ✓
+  - CERT converter successfully extracts real insider threat patterns ✓
 
 - [ ] 8. Implement Enrichment MCP Server
   - [ ] 8.1 Create enrichment/server.py with MCP SDK setup

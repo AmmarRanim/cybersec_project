@@ -2,31 +2,75 @@
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 *.egg-info/
 dist/
 build/
+*.so
+.Python
 
 # Virtual environment
 .venv/
 venv/
+env/
+ENV/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
 # Environment variables
 .env
+.env.local
 
 # Logs (keep directory, ignore contents)
 logs/*.jsonl
 logs/*.log
 !logs/.gitkeep
 
+# Mailbox exports (optional - uncomment if you don't want to commit exports)
+# mailbox/clean_events.json
+# mailbox/clean_events_metadata.json
+
+# Test files directory
+test_files/
+test_files_monitor/
+
+# CERT dataset (large files - don't commit)
+r4.2/
+
 # OS files
 Thumbs.db
 .DS_Store
+*.tmp
+*.bak
+*~
 
 # Node
 node_modules/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.temp
+*.swp

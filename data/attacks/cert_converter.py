@@ -6,7 +6,7 @@ Converts CERT Insider Threat Test Dataset r4.2 attack scenarios
 to attack_patterns.json format compatible with Attack-Injector MCP.
 
 Usage:
-    python cert_converter.py --cert-dir /path/to/cert/r4.2/answers --output attack_patterns.json [--merge]
+    python data/attacks/cert_converter.py --cert-dir r4.2/answers --output data/attacks/attack_patterns.json --merge --limit 10
 
 CERT Dataset: https://kilthub.cmu.edu/articles/dataset/Insider_Threat_Test_Dataset/12841247
 """
@@ -15,222 +15,299 @@ import argparse
 import json
 import csv
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from datetime import datetime
+from typing import Dict, List, Any, Optional, Tuple
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 
 # Mapping from CERT event types to StandardEvent schema
 CERT_EVENT_TYPE_MAPPING = {
-    "Logon": {"event_type": "logon", "event_category": "system", "action": "logon"},
-    "Logoff": {"event_type": "logoff", "event_category": "system", "action": "logoff"},
-    "Connect": {"event_type": "device_connect", "event_category": "device", "action": "connect"},
-    "Disconnect": {"event_type": "device_disconnect", "event_category": "device", "action": "disconnect"},
-    "File": {"event_type": "file_access", "event_category": "file", "action": "read"},
-    "Email": {"event_type": "email_sent", "event_category": "email", "action": "send"},
-    "Http": {"event_type": "http_request", "event_category": "web", "action": "request"},
+    "logon": {"event_type": "logon", "event_category": "system", "action": "logon"},
+    "logoff": {"event_type": "logoff", "event_category": "system", "action": "logoff"},
+    "device": {"event_type": "device_connect", "event_category": "device", "action": "connect"},
+    "file": {"event_type": "file_access", "event_category": "file", "action": "write"},
+    "email": {"event_type": "email_sent", "event_category": "email", "action": "send"},
+    "http": {"event_type": "http_request", "event_category": "web", "action": "request"},
 }
 
-# MITRE ATT&CK technique mapping for common CERT scenarios
+# MITRE ATT&CK technique mapping for CERT scenarios (from scenarios.txt)
 CERT_SCENARIO_MITRE_MAPPING = {
-    "usb_exfiltration": "T1052.001",
-    "email_exfiltration": "T1114.002",
-    "web_exfiltration": "T1048.003",
-    "credential_theft": "T1555.003",
-    "file_discovery": "T1083",
+    1: {"technique": "T1052.001", "category": "data_exfiltration", "name": "USB Exfiltration + Wikileaks"},
+    2: {"technique": "T1052.001", "category": "data_exfiltration", "name": "Job Hunting + USB Theft"},
+    3: {"technique": "T1056.001", "category": "credential_access", "name": "Keylogger + Impersonation"},
+    4: {"technique": "T1114.002", "category": "data_exfiltration", "name": "Unauthorized Access + Email Exfil"},
+    5: {"technique": "T1567.002", "category": "data_exfiltration", "name": "Dropbox Upload After Layoff"},
+}
+
+# Severity mapping
+CERT_SCENARIO_SEVERITY = {
+    1: "critical",  # Wikileaks upload
+    2: "high",      # USB theft
+    3: "critical",  # Keylogger + impersonation
+    4: "high",      # Email exfiltration
+    5: "medium",    # Dropbox upload
 }
 
 
-def parse_cert_answers(cert_dir: Path) -> Dict[str, Dict[str, Any]]:
+def parse_insiders_csv(cert_dir: Path) -> List[Dict[str, Any]]:
     """
-    Parse CERT r4.2 answers directory for labeled attack scenarios.
+    Parse CERT r4.2 insiders.csv for labeled attack scenarios.
     
     Args:
         cert_dir: Path to CERT r4.2 answers/ directory
     
     Returns:
-        Dictionary mapping scenario IDs to scenario metadata
+        List of insider threat instances with metadata
     """
-    scenarios = {}
+    insiders_file = cert_dir / "insiders.csv"
     
-    # Look for answers.csv or similar files
-    answer_files = list(cert_dir.glob("*.csv"))
+    if not insiders_file.exists():
+        print(f"Error: insiders.csv not found at {insiders_file}")
+        return []
     
-    if not answer_files:
-        print(f"Warning: No CSV files found in {cert_dir}")
-        return scenarios
+    insiders = []
     
-    for answer_file in answer_files:
-        print(f"Parsing {answer_file.name}...")
-        
-        try:
-            with open(answer_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                
-                for row in reader:
-                    scenario_id = row.get('scenario', row.get('id', 'unknown'))
-                    
-                    scenarios[scenario_id] = {
-                        "user": row.get('user', row.get('userid', 'unknown')),
-                        "start_date": row.get('start', row.get('start_date', '')),
-                        "end_date": row.get('end', row.get('end_date', '')),
-                        "description": row.get('description', row.get('scenario_description', '')),
-                        "attack_type": row.get('attack_type', 'unknown'),
-                        "severity": row.get('severity', 'medium')
-                    }
-        
-        except Exception as e:
-            print(f"Error parsing {answer_file}: {e}")
+    print(f"Parsing {insiders_file}...")
     
-    print(f"Found {len(scenarios)} scenarios")
-    return scenarios
+    try:
+        with open(insiders_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            
+            for row in reader:
+                # Filter for r4.2 dataset only
+                if row.get('dataset') == '4.2':
+                    insiders.append({
+                        "dataset": row['dataset'],
+                        "scenario": int(row['scenario']),
+                        "details_file": row['details'],
+                        "user": row['user'],
+                        "start": row['start'],
+                        "end": row['end']
+                    })
+    
+    except Exception as e:
+        print(f"Error parsing insiders.csv: {e}")
+        return []
+    
+    print(f"Found {len(insiders)} r4.2 insider threat instances")
+    return insiders
 
 
-def parse_cert_events(cert_dir: Path, scenario_id: str, user_id: str) -> List[Dict[str, Any]]:
+def parse_cert_detail_file(cert_dir: Path, details_file: str) -> List[Dict[str, Any]]:
     """
-    Parse CERT event logs for a specific scenario and user.
+    Parse a CERT r4.2 detail file for a specific insider threat instance.
+    
+    The detail files have variable-length rows with format:
+    event_type,id,timestamp,user,pc,activity[,content]
     
     Args:
-        cert_dir: Path to CERT r4.2 directory
-        scenario_id: Scenario identifier
-        user_id: User identifier
+        cert_dir: Path to CERT r4.2 answers/ directory
+        details_file: Name of the details file (e.g., 'r4.2-1-AAM0658.csv')
     
     Returns:
         List of parsed events
     """
+    # Determine subdirectory based on filename pattern
+    # r4.2-1-*.csv -> r4.2-1/
+    # r4.2-2-*.csv -> r4.2-2/
+    # r4.2-3-*.csv -> r4.2-3/
+    
+    parts = details_file.split('-')
+    if len(parts) >= 3:
+        subdir = f"{parts[0]}-{parts[1]}"
+        detail_path = cert_dir / subdir / details_file
+    else:
+        detail_path = cert_dir / details_file
+    
+    if not detail_path.exists():
+        print(f"Warning: Detail file not found: {detail_path}")
+        return []
+    
     events = []
     
-    # CERT r4.2 typically has separate log files for each event type
-    log_types = ["logon.csv", "device.csv", "file.csv", "email.csv", "http.csv"]
-    
-    for log_type in log_types:
-        log_file = cert_dir.parent / log_type
-        
-        if not log_file.exists():
-            continue
-        
-        try:
-            with open(log_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
+    try:
+        with open(detail_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
                 
-                for row in reader:
-                    # Filter by user
-                    if row.get('user', row.get('userid')) != user_id:
-                        continue
-                    
-                    # Parse event
-                    event = {
-                        "timestamp": row.get('date', row.get('timestamp', '')),
-                        "activity": row.get('activity', ''),
-                        "resource": row.get('content', row.get('filename', row.get('url', 'unknown'))),
-                        "raw_data": row
-                    }
-                    
-                    events.append(event)
-        
-        except Exception as e:
-            print(f"Error parsing {log_file}: {e}")
+                # Split by comma (CSV format)
+                parts = line.split(',')
+                
+                if len(parts) < 6:
+                    continue
+                
+                event_type = parts[0].lower()
+                event_id = parts[1]
+                timestamp = parts[2]
+                user = parts[3]
+                pc = parts[4]
+                activity = parts[5]
+                content = parts[6] if len(parts) > 6 else ""
+                
+                events.append({
+                    "event_type": event_type,
+                    "event_id": event_id,
+                    "timestamp": timestamp,
+                    "user": user,
+                    "pc": pc,
+                    "activity": activity,
+                    "content": content
+                })
     
-    # Sort by timestamp
-    events.sort(key=lambda e: e.get('timestamp', ''))
+    except Exception as e:
+        print(f"Error parsing {detail_path}: {e}")
+        return []
     
     return events
 
 
-def convert_cert_scenario_to_pattern(
-    scenario_id: str,
-    scenario_data: Dict[str, Any],
+def calculate_time_offsets(events: List[Dict[str, Any]]) -> List[Tuple[int, int]]:
+    """
+    Calculate time offsets for events relative to the last event.
+    
+    Args:
+        events: List of events with timestamps
+    
+    Returns:
+        List of (min_offset, max_offset) tuples in minutes
+    """
+    if not events:
+        return []
+    
+    # Parse timestamps
+    timestamps = []
+    for event in events:
+        try:
+            ts = datetime.strptime(event['timestamp'], '%m/%d/%Y %H:%M:%S')
+            timestamps.append(ts)
+        except:
+            timestamps.append(None)
+    
+    # Calculate offsets relative to last event
+    last_ts = timestamps[-1]
+    if last_ts is None:
+        # Fallback to evenly spaced offsets
+        return [[-(len(events) - i) * 5, -(len(events) - i) * 3] for i in range(len(events))]
+    
+    offsets = []
+    for i, ts in enumerate(timestamps):
+        if ts is None:
+            # Fallback
+            offset = -(len(events) - i) * 5
+            offsets.append([offset, offset])
+        else:
+            delta = (ts - last_ts).total_seconds() / 60  # Convert to minutes
+            # Add some variance (+/- 20%)
+            variance = abs(delta) * 0.2
+            offsets.append([int(delta - variance), int(delta + variance)])
+    
+    return offsets
+
+
+def convert_cert_instance_to_pattern(
+    insider: Dict[str, Any],
     events: List[Dict[str, Any]]
 ) -> Optional[Dict[str, Any]]:
     """
-    Convert a CERT scenario to attack_patterns.json format.
+    Convert a CERT insider threat instance to attack_patterns.json format.
     
     Args:
-        scenario_id: Scenario identifier
-        scenario_data: Scenario metadata
-        events: List of events for this scenario
+        insider: Insider metadata from insiders.csv
+        events: List of events from detail file
     
     Returns:
         Attack pattern dictionary or None if conversion fails
     """
     if not events:
-        print(f"Warning: No events for scenario {scenario_id}")
+        print(f"Warning: No events for {insider['details_file']}")
         return None
     
-    # Determine attack category and MITRE technique
-    attack_type = scenario_data.get('attack_type', 'unknown').lower()
-    category = "data_exfiltration"  # Default
-    mitre_technique = "T1041"  # Default: Exfiltration Over C2 Channel
-    
-    if "usb" in attack_type or "removable" in attack_type:
-        category = "data_exfiltration"
-        mitre_technique = "T1052.001"
-    elif "email" in attack_type:
-        category = "data_exfiltration"
-        mitre_technique = "T1114.002"
-    elif "web" in attack_type or "http" in attack_type:
-        category = "data_exfiltration"
-        mitre_technique = "T1048.003"
-    elif "credential" in attack_type or "password" in attack_type:
-        category = "credential_access"
-        mitre_technique = "T1555.003"
-    elif "discovery" in attack_type or "reconnaissance" in attack_type:
-        category = "discovery"
-        mitre_technique = "T1083"
+    scenario_num = insider['scenario']
+    scenario_info = CERT_SCENARIO_MITRE_MAPPING.get(scenario_num, {
+        "technique": "T1041",
+        "category": "data_exfiltration",
+        "name": f"Unknown Scenario {scenario_num}"
+    })
     
     # Build event sequence
     sequence = []
+    time_offsets = calculate_time_offsets(events)
     
-    # Sample events (limit to first 10 for pattern)
+    # Limit to 10 events for pattern (representative sample)
     sampled_events = events[:10]
+    sampled_offsets = time_offsets[:10]
     
-    for idx, event in enumerate(sampled_events, start=1):
-        activity = event.get('activity', '').lower()
+    for idx, (event, offset) in enumerate(zip(sampled_events, sampled_offsets), start=1):
+        event_type = event['event_type']
         
-        # Map CERT activity to StandardEvent
-        event_mapping = None
-        for cert_type, mapping in CERT_EVENT_TYPE_MAPPING.items():
-            if cert_type.lower() in activity:
-                event_mapping = mapping
-                break
+        # Map CERT event type to StandardEvent
+        event_mapping = CERT_EVENT_TYPE_MAPPING.get(event_type, {
+            "event_type": "file_access",
+            "event_category": "file",
+            "action": "read"
+        })
         
-        if not event_mapping:
-            # Default to file access
-            event_mapping = {"event_type": "file_access", "event_category": "file", "action": "read"}
+        # Determine resource pattern
+        resource = event.get('content', 'unknown')
+        if event_type == 'device':
+            resource = f"USB_DEVICE_{event.get('activity', 'unknown')}"
+        elif event_type == 'http':
+            # Extract domain from content
+            if 'wikileaks' in resource.lower():
+                resource = "http://wikileaks.org/*"
+            elif 'dropbox' in resource.lower():
+                resource = "http://dropbox.com/*"
+            else:
+                resource = "http://external_site/*"
+        elif event_type == 'file':
+            resource = f"E:\\{event.get('activity', 'file.txt')}"
+        elif event_type == 'email':
+            resource = "email_to_external"
         
-        # Calculate time offset (relative to last event)
-        time_offset = [-(len(sampled_events) - idx) * 5, -(len(sampled_events) - idx) * 3]
-        if idx == len(sampled_events):
-            time_offset = [0, 0]
+        # Build metadata
+        metadata = {"sensitivity_level": 1}
+        
+        if event_type == 'device':
+            metadata["device_type"] = "usb_storage"
+        elif event_type == 'file':
+            metadata["is_usb"] = True
+            metadata["file_size_bytes"] = [1000000, 10000000]
+        elif event_type == 'email':
+            metadata["external_recipient_count"] = 1
+            metadata["attachment_count"] = [0, 2]
         
         sequence.append({
             "step": idx,
             "event_type": event_mapping["event_type"],
             "event_category": event_mapping["event_category"],
             "action": event_mapping["action"],
-            "resource_patterns": [event.get('resource', 'unknown')],
-            "time_offset_minutes": time_offset,
-            "metadata": {
-                "sensitivity_level": 1 if "sensitive" in str(event).lower() else 0
-            }
+            "resource_patterns": [resource],
+            "time_offset_minutes": offset,
+            "metadata": metadata
         })
+    
+    # Build pattern ID
+    pattern_id = f"cert_r42_s{scenario_num}_{insider['user'].lower()}"
     
     # Build pattern
     pattern = {
-        "id": f"cert_{scenario_id}",
-        "name": f"CERT Scenario {scenario_id}",
-        "category": category,
+        "id": pattern_id,
+        "name": f"CERT r4.2 - {scenario_info['name']}",
+        "category": scenario_info['category'],
         "subcategory": "cert_dataset",
-        "mitre_technique": mitre_technique,
-        "severity": scenario_data.get('severity', 'medium'),
-        "description": scenario_data.get('description', f"CERT r4.2 scenario {scenario_id}"),
+        "mitre_technique": scenario_info['technique'],
+        "severity": CERT_SCENARIO_SEVERITY.get(scenario_num, 'medium'),
+        "description": f"Real insider threat from CERT r4.2 dataset - Scenario {scenario_num}",
         "sequence": sequence,
         "source": "cert_r4.2",
         "cert_metadata": {
-            "scenario_id": scenario_id,
-            "user": scenario_data.get('user'),
-            "start_date": scenario_data.get('start_date'),
-            "end_date": scenario_data.get('end_date')
+            "scenario": scenario_num,
+            "user": insider['user'],
+            "start_date": insider['start'],
+            "end_date": insider['end'],
+            "details_file": insider['details_file']
         }
     }
     
@@ -240,9 +317,10 @@ def convert_cert_scenario_to_pattern(
 def main():
     parser = argparse.ArgumentParser(description="Convert CERT r4.2 dataset to attack_patterns.json")
     parser.add_argument("--cert-dir", required=True, help="Path to CERT r4.2 answers/ directory")
-    parser.add_argument("--output", default="attack_patterns.json", help="Output file path")
+    parser.add_argument("--output", default="data/attacks/attack_patterns.json", help="Output file path")
     parser.add_argument("--merge", action="store_true", help="Merge with existing patterns")
-    parser.add_argument("--limit", type=int, help="Limit number of scenarios to convert")
+    parser.add_argument("--limit", type=int, default=10, help="Limit number of instances to convert (default: 10)")
+    parser.add_argument("--scenario", type=int, help="Convert only specific scenario number (1-5)")
     
     args = parser.parse_args()
     
@@ -253,51 +331,85 @@ def main():
         print(f"Error: CERT directory not found: {cert_dir}")
         return 1
     
-    print(f"Converting CERT r4.2 dataset from {cert_dir}")
+    print("=" * 60)
+    print("CERT r4.2 Dataset Converter")
+    print("=" * 60)
+    print(f"Input: {cert_dir}")
     print(f"Output: {output_path}")
+    print(f"Limit: {args.limit} instances")
+    if args.scenario:
+        print(f"Scenario filter: {args.scenario}")
+    print()
     
-    # Parse CERT scenarios
-    scenarios = parse_cert_answers(cert_dir)
+    # Parse insiders.csv
+    insiders = parse_insiders_csv(cert_dir)
     
-    if not scenarios:
-        print("Error: No scenarios found in CERT dataset")
+    if not insiders:
+        print("Error: No insider threat instances found")
         return 1
     
-    # Convert scenarios to patterns
+    # Filter by scenario if specified
+    if args.scenario:
+        insiders = [i for i in insiders if i['scenario'] == args.scenario]
+        print(f"Filtered to {len(insiders)} instances for scenario {args.scenario}")
+    
+    # Limit number of instances
+    if args.limit:
+        insiders = insiders[:args.limit]
+        print(f"Limited to {len(insiders)} instances")
+    
+    print()
+    
+    # Convert instances to patterns
     patterns = []
     
-    for idx, (scenario_id, scenario_data) in enumerate(scenarios.items()):
-        if args.limit and idx >= args.limit:
-            break
+    for idx, insider in enumerate(insiders, start=1):
+        print(f"[{idx}/{len(insiders)}] Converting {insider['details_file']}...")
+        print(f"  User: {insider['user']}, Scenario: {insider['scenario']}")
+        print(f"  Period: {insider['start']} to {insider['end']}")
         
-        print(f"\nConverting scenario {scenario_id}...")
+        # Parse events from detail file
+        events = parse_cert_detail_file(cert_dir, insider['details_file'])
         
-        # Parse events for this scenario
-        user_id = scenario_data.get('user')
-        events = parse_cert_events(cert_dir, scenario_id, user_id)
+        if not events:
+            print(f"  ✗ No events found")
+            continue
+        
+        print(f"  Found {len(events)} events")
         
         # Convert to pattern
-        pattern = convert_cert_scenario_to_pattern(scenario_id, scenario_data, events)
+        pattern = convert_cert_instance_to_pattern(insider, events)
         
         if pattern:
             patterns.append(pattern)
-            print(f"  ✓ Converted {len(pattern['sequence'])} events")
+            print(f"  OK Converted to pattern: {pattern['id']}")
         else:
             print(f"  ✗ Failed to convert")
+        
+        print()
     
-    print(f"\nConverted {len(patterns)} patterns")
+    print("=" * 60)
+    print(f"Converted {len(patterns)} patterns from CERT r4.2")
+    print("=" * 60)
+    print()
     
     # Load existing patterns if merging
     existing_patterns = []
     if args.merge and output_path.exists():
-        print(f"Loading existing patterns from {output_path}")
-        with open(output_path, 'r', encoding='utf-8') as f:
-            existing_data = json.load(f)
-            existing_patterns = existing_data.get('attack_patterns', [])
-        print(f"Found {len(existing_patterns)} existing patterns")
+        print(f"Loading existing patterns from {output_path}...")
+        try:
+            with open(output_path, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+                existing_patterns = existing_data.get('attack_patterns', [])
+            print(f"Found {len(existing_patterns)} existing patterns")
+        except Exception as e:
+            print(f"Warning: Could not load existing patterns: {e}")
     
-    # Merge patterns
-    all_patterns = existing_patterns + patterns
+    # Merge patterns (avoid duplicates by ID)
+    existing_ids = {p['id'] for p in existing_patterns}
+    new_patterns = [p for p in patterns if p['id'] not in existing_ids]
+    
+    all_patterns = existing_patterns + new_patterns
     
     # Create output dataset
     output_data = {
@@ -312,9 +424,11 @@ def main():
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, indent=2)
     
-    print(f"\n✓ Wrote {len(all_patterns)} patterns to {output_path}")
+    print(f"\nOK Wrote {len(all_patterns)} patterns to {output_path}")
     print(f"  - {len(existing_patterns)} existing patterns")
-    print(f"  - {len(patterns)} new CERT patterns")
+    print(f"  - {len(new_patterns)} new CERT patterns")
+    print(f"  - {len(patterns) - len(new_patterns)} duplicates skipped")
+    print()
     
     return 0
 

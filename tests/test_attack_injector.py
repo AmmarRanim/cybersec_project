@@ -35,7 +35,7 @@ def test_load_attack_patterns():
     assert isinstance(dataset["attack_patterns"], list), "attack_patterns must be a list"
     
     patterns = dataset["attack_patterns"]
-    print(f"✓ Loaded {len(patterns)} attack patterns")
+    print(f"OK Loaded {len(patterns)} attack patterns")
     
     # Verify each pattern has required fields
     for pattern in patterns:
@@ -46,23 +46,23 @@ def test_load_attack_patterns():
         assert "sequence" in pattern, f"Pattern missing sequence: {pattern}"
         print(f"  - {pattern['id']}: {pattern['name']} ({len(pattern['sequence'])} events)")
     
-    print("✓ All patterns have required fields")
+    print("OK All patterns have required fields")
 
 
 def test_get_pattern_by_id():
     """Test retrieving specific attack pattern by ID."""
     print("\n=== Test: Get Pattern By ID ===")
     
-    # Test valid pattern
-    pattern = get_pattern_by_id("usb_exfil_financial_001")
+    # Test valid pattern (use a CERT pattern)
+    pattern = get_pattern_by_id("cert_r42_s1_aam0658")
     assert pattern is not None, "Pattern not found"
-    assert pattern["id"] == "usb_exfil_financial_001"
-    print(f"✓ Found pattern: {pattern['name']}")
+    assert pattern["id"] == "cert_r42_s1_aam0658"
+    print(f"OK Found pattern: {pattern['name']}")
     
     # Test invalid pattern
     pattern = get_pattern_by_id("invalid_pattern_id")
     assert pattern is None, "Should return None for invalid ID"
-    print("✓ Returns None for invalid ID")
+    print("OK Returns None for invalid ID")
 
 
 def test_filter_patterns():
@@ -72,17 +72,17 @@ def test_filter_patterns():
     # Filter by category
     patterns = filter_patterns(category="data_exfiltration")
     assert len(patterns) > 0, "Should find data_exfiltration patterns"
-    print(f"✓ Found {len(patterns)} data_exfiltration patterns")
+    print(f"OK Found {len(patterns)} data_exfiltration patterns")
     
     # Filter by MITRE technique
     patterns = filter_patterns(mitre_technique="T1052.001")
     assert len(patterns) > 0, "Should find T1052.001 patterns"
-    print(f"✓ Found {len(patterns)} T1052.001 patterns")
+    print(f"OK Found {len(patterns)} T1052.001 patterns")
     
     # Filter by severity
     patterns = filter_patterns(severity="high")
     assert len(patterns) > 0, "Should find high severity patterns"
-    print(f"✓ Found {len(patterns)} high severity patterns")
+    print(f"OK Found {len(patterns)} high severity patterns")
 
 
 def test_load_user_device_map():
@@ -97,7 +97,7 @@ def test_load_user_device_map():
     users = user_device_map["users"]
     devices = user_device_map["devices"]
     
-    print(f"✓ Loaded {len(users)} users and {len(devices)} devices")
+    print(f"OK Loaded {len(users)} users and {len(devices)} devices")
     
     # Verify user structure
     for user_id, user_data in users.items():
@@ -116,15 +116,15 @@ def test_select_random_user_device():
     assert user_id is not None, "Should return user_id"
     assert device_id is not None, "Should return device_id"
     
-    print(f"✓ Selected user {user_id} and device {device_id}")
+    print(f"OK Selected user {user_id} and device {device_id}")
 
 
 def test_generate_events_from_pattern():
     """Test generating events from attack pattern."""
     print("\n=== Test: Generate Events From Pattern ===")
     
-    # Get a pattern
-    pattern = get_pattern_by_id("usb_exfil_financial_001")
+    # Get a pattern (use a CERT pattern)
+    pattern = get_pattern_by_id("cert_r42_s1_aam0658")
     assert pattern is not None, "Pattern not found"
     
     # Generate events
@@ -133,7 +133,7 @@ def test_generate_events_from_pattern():
     assert len(events) > 0, "Should generate events"
     assert len(events) == len(pattern["sequence"]), "Should generate one event per sequence step"
     
-    print(f"✓ Generated {len(events)} events")
+    print(f"OK Generated {len(events)} events")
     
     # Verify event structure
     for event in events:
@@ -151,15 +151,15 @@ def test_generate_events_from_pattern():
         
         print(f"  - {event.event_type}: {event.resource}")
     
-    print("✓ All events have required fields and simulation markers")
+    print("OK All events have required fields and simulation markers")
 
 
 def test_inject_attack():
     """Test inject_attack function."""
     print("\n=== Test: Inject Attack ===")
     
-    # Test with specific attack ID
-    result = inject_attack(attack_id="usb_exfil_financial_001")
+    # Test with specific attack ID (use a CERT pattern)
+    result = inject_attack(attack_id="cert_r42_s1_aam0658")
     
     assert "events" in result, "Result missing events"
     assert "count" in result, "Result missing count"
@@ -170,7 +170,7 @@ def test_inject_attack():
     assert len(events) > 0, "Should generate events"
     assert result["count"] == len(events), "Count should match events length"
     
-    print(f"✓ Injected attack: {result['attack_name']}")
+    print(f"OK Injected attack: {result['attack_name']}")
     print(f"  - Attack ID: {result['attack_id']}")
     print(f"  - MITRE Technique: {result['mitre_technique']}")
     print(f"  - Event Count: {result['count']}")
@@ -184,7 +184,7 @@ def test_inject_attack():
         assert "metadata" in event, "Event missing metadata"
         assert event["metadata"]["is_simulated"] == True, "Event should be marked as simulated"
     
-    print("✓ All events are valid dictionaries with simulation markers")
+    print("OK All events are valid dictionaries with simulation markers")
 
 
 def test_inject_attack_by_category():
@@ -196,7 +196,7 @@ def test_inject_attack_by_category():
     assert "events" in result, "Result missing events"
     assert result["attack_type"] == "data_exfiltration", "Should match requested category"
     
-    print(f"✓ Injected random data_exfiltration attack: {result['attack_name']}")
+    print(f"OK Injected random data_exfiltration attack: {result['attack_name']}")
     print(f"  - Event Count: {result['count']}")
 
 
@@ -209,7 +209,7 @@ def test_inject_attack_invalid_id():
     assert "error" in result, "Should return error for invalid ID"
     assert result["error"]["type"] == "validation_error", "Should be validation error"
     
-    print(f"✓ Returns error for invalid attack ID: {result['error']['message']}")
+    print(f"OK Returns error for invalid attack ID: {result['error']['message']}")
 
 
 def run_all_tests():
@@ -230,18 +230,18 @@ def run_all_tests():
         test_inject_attack_invalid_id()
         
         print("\n" + "=" * 60)
-        print("✓ ALL TESTS PASSED")
+        print("OK ALL TESTS PASSED")
         print("=" * 60)
         return 0
     
     except AssertionError as e:
-        print(f"\n✗ TEST FAILED: {e}")
+        print(f"\nFAIL TEST FAILED: {e}")
         import traceback
         traceback.print_exc()
         return 1
     
     except Exception as e:
-        print(f"\n✗ UNEXPECTED ERROR: {e}")
+        print(f"\nFAIL UNEXPECTED ERROR: {e}")
         import traceback
         traceback.print_exc()
         return 1
